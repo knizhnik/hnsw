@@ -46,8 +46,8 @@ struct HierarchicalNSW
 		return (coord_t *)&data_level0_memory[internal_id * size_data_per_element + offset_data];
 	}
 
-	inline uint8_t *get_linklist0(idx_t internal_id) const {
-		return (uint8_t*)&data_level0_memory[internal_id * size_data_per_element];
+	inline idx_t *get_linklist0(idx_t internal_id) const {
+		return (idx_t*)&data_level0_memory[internal_id * size_data_per_element];
 	}
 
 	inline label_t *getExternalLabel(idx_t internal_id) const {

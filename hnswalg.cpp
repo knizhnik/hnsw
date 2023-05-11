@@ -24,7 +24,7 @@ HierarchicalNSW::HierarchicalNSW(size_t dim_, size_t maxelements_, size_t M_, si
     maxelements = maxelements_;
     M = M_;
     maxM = maxM_;
-    size_links_level0 = maxM * sizeof(idx_t) + sizeof(uint8_t);
+    size_links_level0 = (maxM + 1) * sizeof(idx_t);
     size_data_per_element = size_links_level0 + data_size  + sizeof(label_t);
     offset_data = size_links_level0;
 	offset_label = offset_data + data_size;
@@ -37,7 +37,7 @@ HierarchicalNSW::HierarchicalNSW(size_t dim_, size_t maxelements_, size_t M_, si
 std::priority_queue<std::pair<dist_t, idx_t>> HierarchicalNSW::searchBaseLayer(const coord_t *point, size_t ef)
 {
 	std::vector<uint32_t> visited;
-	visited.resize((maxelements + 31) >> 5);
+	visited.resize((cur_element_count + 31) >> 5);
 
     std::priority_queue<std::pair<dist_t, idx_t >> topResults;
     std::priority_queue<std::pair<dist_t, idx_t >> candidateSet;
@@ -58,9 +58,8 @@ std::priority_queue<std::pair<dist_t, idx_t>> HierarchicalNSW::searchBaseLayer(c
         candidateSet.pop();
         idx_t curNodeNum = curr_el_pair.second;
 
-        uint8_t *ll_cur = get_linklist0(curNodeNum);
-        size_t size = *ll_cur;
-        idx_t *data = (idx_t *)(ll_cur + 1);
+        idx_t* data = get_linklist0(curNodeNum);
+        size_t size = *data++;
 
         PREFETCH(getDataByInternalId(*data), _MM_HINT_T0);
 
@@ -138,13 +137,12 @@ void HierarchicalNSW::mutuallyConnectNewElement(const coord_t *point, idx_t cur_
         topResults.pop();
     }
     {
-        uint8_t *ll_cur = get_linklist0(cur_c);
-        if (*ll_cur)
+        idx_t* data = get_linklist0(cur_c);
+        if (*data)
             throw std::runtime_error("Should be blank");
 
-        *ll_cur = res.size();
+        *data++ = res.size();
 
-        idx_t *data = (idx_t *)(ll_cur + 1);
         for (size_t idx = 0; idx < res.size(); idx++) {
             if (data[idx])
                 throw std::runtime_error("Should be blank");
@@ -156,19 +154,19 @@ void HierarchicalNSW::mutuallyConnectNewElement(const coord_t *point, idx_t cur_
             throw std::runtime_error("Connection to the same element");
 
         size_t resMmax = maxM;
-        uint8_t *ll_other = get_linklist0(res[idx]);
-        uint8_t sz_link_list_other = *ll_other;
+        idx_t *ll_other = get_linklist0(res[idx]);
+        idx_t sz_link_list_other = *ll_other;
 
         if (sz_link_list_other > resMmax || sz_link_list_other < 0)
             throw std::runtime_error("Bad sz_link_list_other");
 
         if (sz_link_list_other < resMmax) {
-            idx_t *data = (idx_t *) (ll_other + 1);
+            idx_t *data = ll_other + 1;
             data[sz_link_list_other] = cur_c;
             *ll_other = sz_link_list_other + 1;
         } else {
             // finding the "weakest" element to replace it with the new one
-            idx_t *data = (idx_t *) (ll_other + 1);
+            idx_t *data = ll_other + 1;
             dist_t d_max = fstdistfunc(getDataByInternalId(cur_c), getDataByInternalId(res[idx]));
             // Heuristic:
             std::priority_queue<std::pair<dist_t, idx_t>> candidates;

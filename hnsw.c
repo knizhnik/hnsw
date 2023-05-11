@@ -2,6 +2,7 @@
 
 #include "access/amapi.h"
 #include "access/generic_xlog.h"
+#include "access/relation.h"
 #include "access/reloptions.h"
 #include "access/tableam.h"
 #include "catalog/index.h"
@@ -199,7 +200,9 @@ hnsw_beginscan(Relation index, int nkeys, int norderbys)
 {
 	IndexScanDesc scan = RelationGetIndexScan(index, nkeys, norderbys);
 	HnswScanOpaque so = (HnswScanOpaque) palloc(sizeof(HnswScanOpaqueData));
+	Relation heap = relation_open(index->rd_index->indrelid, NoLock);
 	so->hnsw = hnsw_get_index(index, scan->heapRelation);
+	relation_close(heap, NoLock);
 	so->curr = 0;
 	so->n_results = 0;
 	so->results = NULL;
