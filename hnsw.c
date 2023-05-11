@@ -201,7 +201,7 @@ hnsw_beginscan(Relation index, int nkeys, int norderbys)
 	IndexScanDesc scan = RelationGetIndexScan(index, nkeys, norderbys);
 	HnswScanOpaque so = (HnswScanOpaque) palloc(sizeof(HnswScanOpaqueData));
 	Relation heap = relation_open(index->rd_index->indrelid, NoLock);
-	so->hnsw = hnsw_get_index(index, scan->heapRelation);
+	so->hnsw = hnsw_get_index(index, heap);
 	relation_close(heap, NoLock);
 	so->curr = 0;
 	so->n_results = 0;
