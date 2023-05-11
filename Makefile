@@ -13,6 +13,7 @@ REGRESS_OPTS = --inputdir=test --load-extension=hnsw
 # - GCC (needs -ftree-vectorize OR -O3) - https://gcc.gnu.org/projects/tree-ssa/vectorization.html
 PG_CFLAGS += -O3
 PG_CPPFLAGS += -O3
+PG_ldflags += -lstdc++
 
 all: $(EXTENSION)--$(EXTVERSION).sql
 

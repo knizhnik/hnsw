@@ -58,6 +58,8 @@ typedef struct {
 
 #define INDEX_HASH_SIZE     11
 
+PGDLLEXPORT void _PG_init(void);
+
 static hnsw_index_hash *hnsw_indexes;
 
 /*
