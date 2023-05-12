@@ -13,13 +13,12 @@
 #define PREFETCH(addr,hint)
 #endif
 
-HierarchicalNSW::HierarchicalNSW(size_t dim_, size_t maxelements_, size_t M_, size_t maxM_, size_t efConstruction_, size_t efSearch_)
+HierarchicalNSW::HierarchicalNSW(size_t dim_, size_t maxelements_, size_t M_, size_t maxM_, size_t efConstruction_)
 {
     dim = dim_;
     data_size = dim * sizeof(coord_t);
 
     efConstruction = efConstruction_;
-    efSearch = efSearch_;
 
     maxelements = maxelements_;
     M = M_;
@@ -208,7 +207,7 @@ void HierarchicalNSW::addPoint(const coord_t *point, label_t label)
 std::priority_queue<std::pair<dist_t, label_t>> HierarchicalNSW::searchKnn(const coord_t *query, size_t k)
 {
 	std::priority_queue<std::pair<dist_t, label_t>> topResults;
-	auto topCandidates = searchBaseLayer(query, std::max(k, efSearch));
+	auto topCandidates = searchBaseLayer(query, k);
     while (topCandidates.size() > k) {
         topCandidates.pop();
 	}
@@ -238,11 +237,11 @@ dist_t HierarchicalNSW::fstdistfunc(const coord_t *x, const coord_t *y)
 	return distance;
 }
 
-bool hnsw_search(HierarchicalNSW* hnsw, const coord_t *point, size_t* n_results, label_t** results)
+bool hnsw_search(HierarchicalNSW* hnsw, const coord_t *point, size_t efSearch, size_t* n_results, label_t** results)
 {
 	try
 	{
-		auto result = hnsw->searchKnn(point, hnsw->efSearch);
+		auto result = hnsw->searchKnn(point, efSearch);
 		size_t nResults = result.size();
 		*results = (label_t*)malloc(nResults*sizeof(label_t));
 		for (size_t i = nResults; i-- != 0;)
@@ -268,13 +267,14 @@ bool hnsw_add_point(HierarchicalNSW* hnsw, const coord_t *point, label_t label)
 	}
 	catch (std::exception& x)
 	{
+		fprintf(stderr, "Catch %s\n", x.what());
 		return false;
 	}
 }
 
-void hnsw_init(HierarchicalNSW* hnsw, size_t dims, size_t maxelements, size_t M, size_t maxM, size_t efConstruction, size_t efSearch)
+void hnsw_init(HierarchicalNSW* hnsw, size_t dims, size_t maxelements, size_t M, size_t maxM, size_t efConstruction)
 {
-	new ((void*)hnsw) HierarchicalNSW(dims, maxelements, M, maxM, efConstruction, efSearch);
+	new ((void*)hnsw) HierarchicalNSW(dims, maxelements, M, maxM, efConstruction);
 }
 
 

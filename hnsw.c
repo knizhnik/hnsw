@@ -61,6 +61,8 @@ typedef struct {
 
 #define INDEX_HASH_SIZE     11
 
+#define DEFAULT_EF_SEARCH   64
+
 PGDLLEXPORT void _PG_init(void);
 
 static hnsw_index_hash *hnsw_indexes;
@@ -182,7 +184,7 @@ hnsw_get_index(Relation indexRel, Relation heapRel)
 
 		if (!exists)
 		{
-			hnsw_init(hnsw, dims, maxelements, M, maxM, opts->efConstruction, opts->efSearch);
+			hnsw_init(hnsw, dims, maxelements, M, maxM, opts->efConstruction);
 			hnsw_populate(hnsw, indexRel, heapRel);
 		}
 		entry = hnsw_index_insert(hnsw_indexes, indexoid, &found);
@@ -252,6 +254,8 @@ hnsw_gettuple(IndexScanDesc scan, ScanDirection dir)
 		int         n_items;
 		size_t      n_results;
 		label_t*    results;
+		HnswOptions *opts = (HnswOptions *) scan->indexRelation->rd_options;
+		size_t      efSearch = opts ? opts->efSearch : DEFAULT_EF_SEARCH;
 
 		/* Safety check */
 		if (scan->orderByData == NULL)
@@ -270,7 +274,7 @@ hnsw_gettuple(IndexScanDesc scan, ScanDirection dir)
 				 n_items, hnsw_dimensions(so->hnsw));
 		}
 
-		if (!hnsw_search(so->hnsw, (coord_t*)ARR_DATA_PTR(array), &n_results, &results))
+		if (!hnsw_search(so->hnsw, (coord_t*)ARR_DATA_PTR(array), efSearch, &n_results, &results))
 			elog(ERROR, "HNSW index search failed");
 		so->results = (ItemPointer)palloc(n_results*sizeof(ItemPointerData));
 		so->n_results = n_results;

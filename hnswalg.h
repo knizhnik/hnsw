@@ -32,13 +32,12 @@ struct HierarchicalNSW
 	size_t M;
 	size_t maxM;
 	size_t size_links_level0;
-	size_t efSearch;
 	size_t efConstruction;
 
 	char   data_level0_memory[0]; // varying size
 
   public:
-	HierarchicalNSW(size_t dim, size_t maxelements, size_t M, size_t maxM, size_t efConstruction, size_t efSearch);
+	HierarchicalNSW(size_t dim, size_t maxelements, size_t M, size_t maxM, size_t efConstruction);
 	~HierarchicalNSW();
 
 
