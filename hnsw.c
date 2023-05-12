@@ -23,8 +23,9 @@ typedef struct {
 	int32 vl_len_;		/* varlena header (do not touch directly!) */
 	int dims;
 	int maxelements;
-	int ef;
-	int m;
+	int efConstruction;
+	int efSearch;
+	int M;
 } HnswOptions;
 
 static relopt_kind hnsw_relopt_kind;
@@ -77,8 +78,10 @@ _PG_init(void)
 					  0, 0, INT_MAX, AccessExclusiveLock);
 	add_int_reloption(hnsw_relopt_kind, "m", "Number of neighbors of each vertex",
 					  100, 0, INT_MAX, AccessExclusiveLock);
-	add_int_reloption(hnsw_relopt_kind, "ef", "Limit number of inspected neighbors",
-					  200, 1, INT_MAX, AccessExclusiveLock);
+	add_int_reloption(hnsw_relopt_kind, "efconstruction", "Number of inspected neighbors during index construction",
+					  16, 1, INT_MAX, AccessExclusiveLock);
+	add_int_reloption(hnsw_relopt_kind, "efsearch", "Number of inspected neighbors during index search",
+					  64, 1, INT_MAX, AccessExclusiveLock);
 	hnsw_indexes = hnsw_index_create(TopMemoryContext, INDEX_HASH_SIZE, NULL);
 }
 
@@ -128,7 +131,6 @@ hnsw_get_index(Relation indexRel, Relation heapRel)
 		size_t dims, maxelements;
 		size_t M;
 		size_t maxM;
-		size_t ef;
 		size_t size_links_level0;
 		size_t size_data_per_element;
 		size_t data_size;
@@ -145,9 +147,8 @@ hnsw_get_index(Relation indexRel, Relation heapRel)
 		}
 		dims = opts->dims;
 		maxelements = opts->maxelements;
-		M = opts->m;
+		M = opts->M;
 		maxM = M * 2;
-		ef = opts->ef;
 		data_size = dims * sizeof(coord_t);
 		size_links_level0 = (maxM + 1) * sizeof(idx_t);
 		size_data_per_element = size_links_level0 + data_size + sizeof(label_t);
@@ -181,7 +182,7 @@ hnsw_get_index(Relation indexRel, Relation heapRel)
 
 		if (!exists)
 		{
-			hnsw_init(hnsw, dims, maxelements, M, maxM, ef);
+			hnsw_init(hnsw, dims, maxelements, M, maxM, opts->efConstruction, opts->efSearch);
 			hnsw_populate(hnsw, indexRel, heapRel);
 		}
 		entry = hnsw_index_insert(hnsw_indexes, indexoid, &found);
@@ -349,8 +350,9 @@ hnsw_options(Datum reloptions, bool validate)
 	static const relopt_parse_elt tab[] = {
 		{"dims", RELOPT_TYPE_INT, offsetof(HnswOptions, dims)},
 		{"maxelements", RELOPT_TYPE_INT, offsetof(HnswOptions, maxelements)},
-		{"ef", RELOPT_TYPE_INT, offsetof(HnswOptions, ef)},
-		{"m", RELOPT_TYPE_INT, offsetof(HnswOptions, m)}
+		{"efconstruction", RELOPT_TYPE_INT, offsetof(HnswOptions, efConstruction)},
+		{"efsearch", RELOPT_TYPE_INT, offsetof(HnswOptions, efSearch)},
+		{"m", RELOPT_TYPE_INT, offsetof(HnswOptions, M)}
 	};
 
 	return (bytea *) build_reloptions(reloptions, validate,

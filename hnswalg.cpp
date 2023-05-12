@@ -13,13 +13,13 @@
 #define PREFETCH(addr,hint)
 #endif
 
-HierarchicalNSW::HierarchicalNSW(size_t dim_, size_t maxelements_, size_t M_, size_t maxM_, size_t ef)
+HierarchicalNSW::HierarchicalNSW(size_t dim_, size_t maxelements_, size_t M_, size_t maxM_, size_t efConstruction_, size_t efSearch_)
 {
     dim = dim_;
     data_size = dim * sizeof(coord_t);
 
-    efConstruction = ef;
-    efSearch = ef;
+    efConstruction = efConstruction_;
+    efSearch = efSearch_;
 
     maxelements = maxelements_;
     M = M_;
@@ -272,9 +272,9 @@ bool hnsw_add_point(HierarchicalNSW* hnsw, const coord_t *point, label_t label)
 	}
 }
 
-void hnsw_init(HierarchicalNSW* hnsw, size_t dims, size_t maxelements, size_t M, size_t maxM, size_t ef)
+void hnsw_init(HierarchicalNSW* hnsw, size_t dims, size_t maxelements, size_t M, size_t maxM, size_t efConstruction, size_t efSearch)
 {
-	new ((void*)hnsw) HierarchicalNSW(dims, maxelements, M, maxM, ef);
+	new ((void*)hnsw) HierarchicalNSW(dims, maxelements, M, maxM, efConstruction, efSearch);
 }
 
 
