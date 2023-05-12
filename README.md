@@ -20,6 +20,6 @@ described in the article).
 ```
 create extension hnsw;
 create table embeddings(id integer primary key, payload real[]);
-create index on embeddings using hnsw(payload) with (maxelements=1000000, dims=100, ef=200);
+create index on embeddings using hnsw(payload) with (maxelements=1000000, dims=100, ef=200, m=32);
 select id from embeddings order by payload <-> array[1.0, 2.0,...] limit 100;
 ```

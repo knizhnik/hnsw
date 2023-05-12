@@ -24,6 +24,7 @@ typedef struct {
 	int dims;
 	int maxelements;
 	int ef;
+	int m;
 } HnswOptions;
 
 static relopt_kind hnsw_relopt_kind;
@@ -74,6 +75,8 @@ _PG_init(void)
 					  0, 0, INT_MAX, AccessExclusiveLock);
 	add_int_reloption(hnsw_relopt_kind, "maxelements", "Maximal number of elements",
 					  0, 0, INT_MAX, AccessExclusiveLock);
+	add_int_reloption(hnsw_relopt_kind, "m", "Number of neighbors of each vertex",
+					  100, 0, INT_MAX, AccessExclusiveLock);
 	add_int_reloption(hnsw_relopt_kind, "ef", "Limit number of inspected neighbors",
 					  200, 1, INT_MAX, AccessExclusiveLock);
 	hnsw_indexes = hnsw_index_create(TopMemoryContext, INDEX_HASH_SIZE, NULL);
@@ -142,11 +145,11 @@ hnsw_get_index(Relation indexRel, Relation heapRel)
 		}
 		dims = opts->dims;
 		maxelements = opts->maxelements;
-		M = dims;
+		M = opts->m;
 		maxM = M * 2;
-		ef = Max(M, opts->ef);
+		ef = opts->ef;
 		data_size = dims * sizeof(coord_t);
-		size_links_level0 = maxM * sizeof(idx_t) + sizeof(uint8_t);
+		size_links_level0 = (maxM + 1) * sizeof(idx_t);
 		size_data_per_element = size_links_level0 + data_size + sizeof(label_t);
 		shmem_size =  hnsw_sizeof() + maxelements * size_data_per_element;
 
@@ -346,7 +349,8 @@ hnsw_options(Datum reloptions, bool validate)
 	static const relopt_parse_elt tab[] = {
 		{"dims", RELOPT_TYPE_INT, offsetof(HnswOptions, dims)},
 		{"maxelements", RELOPT_TYPE_INT, offsetof(HnswOptions, maxelements)},
-		{"ef", RELOPT_TYPE_INT, offsetof(HnswOptions, ef)}
+		{"ef", RELOPT_TYPE_INT, offsetof(HnswOptions, ef)},
+		{"m", RELOPT_TYPE_INT, offsetof(HnswOptions, m)}
 	};
 
 	return (bytea *) build_reloptions(reloptions, validate,
