@@ -1,16 +1,22 @@
 #include "hnswalg.h"
 
 
-#ifdef USE_PREFETCH
-#ifdef _MSC_VER
-#include <intrin.h>
-#else
+#if defined(__x86_64__)
+
 #include <x86intrin.h>
+#define USE_AVX
+#if defined(__GNUC__)
+#define PORTABLE_ALIGN32 __attribute__((aligned(32)))
+#else
+#define PORTABLE_ALIGN32 __declspec(align(32))
 #endif
 
 #define PREFETCH(addr,hint) _mm_prefetch(addr, hint)
+
 #else
+
 #define PREFETCH(addr,hint)
+
 #endif
 
 HierarchicalNSW::HierarchicalNSW(size_t dim_, size_t maxelements_, size_t M_, size_t maxM_, size_t efConstruction_)
@@ -224,6 +230,73 @@ std::priority_queue<std::pair<dist_t, label_t>> HierarchicalNSW::searchKnn(const
 
 dist_t HierarchicalNSW::fstdistfunc(const coord_t *x, const coord_t *y)
 {
+#if defined(__x86_64__)
+    float PORTABLE_ALIGN32 TmpRes[8];
+    size_t qty16 = dim >> 4;
+	const float *pEnd1 = x + (qty16 << 4);
+#ifdef USE_AVX
+	__m256 diff, v1, v2;
+	__m256 sum = _mm256_set1_ps(0);
+
+	while (x < pEnd1) {
+		v1 = _mm256_loadu_ps(x);
+		x += 8;
+		v2 = _mm256_loadu_ps(y);
+		y += 8;
+		diff = _mm256_sub_ps(v1, v2);
+		sum = _mm256_add_ps(sum, _mm256_mul_ps(diff, diff));
+
+		v1 = _mm256_loadu_ps(x);
+		x += 8;
+		v2 = _mm256_loadu_ps(y);
+		y += 8;
+		diff = _mm256_sub_ps(v1, v2);
+		sum = _mm256_add_ps(sum, _mm256_mul_ps(diff, diff));
+	}
+
+	_mm256_store_ps(TmpRes, sum);
+	float res = TmpRes[0] + TmpRes[1] + TmpRes[2] + TmpRes[3] + TmpRes[4] + TmpRes[5] + TmpRes[6] + TmpRes[7];
+
+	return (res);
+#else
+    __m128 diff, v1, v2;
+    __m128 sum = _mm_set1_ps(0);
+
+    while (x < pEnd1) {
+        v1 = _mm_loadu_ps(x);
+        x += 4;
+        v2 = _mm_loadu_ps(y);
+        y += 4;
+        diff = _mm_sub_ps(v1, v2);
+        sum = _mm_add_ps(sum, _mm_mul_ps(diff, diff));
+
+        v1 = _mm_loadu_ps(x);
+        x += 4;
+        v2 = _mm_loadu_ps(y);
+        y += 4;
+        diff = _mm_sub_ps(v1, v2);
+        sum = _mm_add_ps(sum, _mm_mul_ps(diff, diff));
+
+        v1 = _mm_loadu_ps(x);
+        x += 4;
+        v2 = _mm_loadu_ps(y);
+        y += 4;
+        diff = _mm_sub_ps(v1, v2);
+        sum = _mm_add_ps(sum, _mm_mul_ps(diff, diff));
+
+        v1 = _mm_loadu_ps(x);
+        x += 4;
+        v2 = _mm_loadu_ps(y);
+        y += 4;
+        diff = _mm_sub_ps(v1, v2);
+        sum = _mm_add_ps(sum, _mm_mul_ps(diff, diff));
+    }
+    _mm_store_ps(TmpRes, sum);
+    float res = TmpRes[0] + TmpRes[1] + TmpRes[2] + TmpRes[3];
+
+    return (res);
+#endif
+#else // portable implementation
 	dist_t 	distance = 0.0;
 	size_t  n = dim;
 
@@ -235,6 +308,7 @@ dist_t HierarchicalNSW::fstdistfunc(const coord_t *x, const coord_t *y)
 		distance += diff * diff;
 	}
 	return distance;
+#endif
 }
 
 bool hnsw_search(HierarchicalNSW* hnsw, const coord_t *point, size_t efSearch, size_t* n_results, label_t** results)
